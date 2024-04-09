@@ -1,0 +1,34 @@
+---
+- hosts:
+    - cluster_beegfs_mgmt
+    - cluster_beegfs_mds
+    - cluster_beegfs_oss
+    - cluster_beegfs_client
+  roles:
+    - role: stackhpc.beegfs
+      beegfs_enable:
+        admon: false
+        mgmt: "{{ inventory_hostname in groups['cluster_beegfs_mgmt'] }}"
+        meta: "{{ inventory_hostname in groups['cluster_beegfs_mds'] }}"
+        oss: "{{ inventory_hostname in groups['cluster_beegfs_oss'] }}"
+        tuning: "{{ inventory_hostname in groups['cluster_beegfs_oss'] }}"
+        client: "{{ inventory_hostname in groups['cluster_beegfs_client'] }}"
+      beegfs_oss:
+        - dev: "/dev/sdb"
+          path: "/beegfs"
+          port: 8003
+        - dev: "/dev/sdb"
+          path: "/beegfs2"
+          port: 8004
+      beegfs_mgmt_host: "{{groups['cluster_beegfs_mgmt'] | first }}"
+      beegfs_mds:
+        - dev: "/dev/sdb"
+          port: 8005
+      beegfs_client:
+        - path: "/mnt/beegfs"
+          port: 8006
+      beegfs_fstype: "xfs"
+      beegfs_force_format: false
+      beegfs_interfaces: ["eth0"]
+      beegfs_rdma: false
+      beegfs_state: present

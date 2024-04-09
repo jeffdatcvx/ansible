@@ -1,0 +1,54 @@
+---
+- name: mount module demo
+  hosts: sfollower
+  become: true
+  tasks:
+    - name: remove beegfs packages for oss
+      ansible.builtin.yum:
+        name:
+          - beegfs-storage
+          - beegfs-common
+          - beegfs-utils
+        state: absent
+
+    - name: install beegfs packages for oss
+      ansible.builtin.yum:
+        name:
+          - beegfs-storage
+          - beegfs-common
+          - beegfs-utils
+        state: present
+
+    - name: disable authentication
+      command: "sed -i 's/connDisableAuthentication    = false/connDisableAuthentication    = true/g' /etc/beegfs/beegfs-storage.conf"
+
+    - name: Create a new primary partition with a size of 1GiB
+      community.general.parted:
+        device: /dev/sdb
+        number: 1
+        fs_type: xfs
+        label: gpt
+        state: present
+
+    - name: Create a ext4 filesystem on /dev/sdb1 and check disk blocks
+      filesystem:
+        fstype: xfs
+        dev: /dev/sdb1
+        opts: "-L data -d su=128k,sw=8 -l version=2,su=128k -isize=512"
+
+    - name: Mount filesystem
+      mount:
+        fstype: xfs
+        src: LABEL=data
+        path: /beegfs
+        opts: "noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"
+        state: mounted
+
+    - name: Run storage service setup script
+      command: /opt/beegfs/sbin/beegfs-setup-storage -p /beegfs/storage -f -m bgfs-mgmt1
+
+    - name: Enable a timer unit for dnf-automatic
+      ansible.builtin.systemd:
+        name: beegfs-storage
+        state: started
+        enabled: yes

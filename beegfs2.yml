@@ -1,0 +1,77 @@
+---
+- name: beegfs setup
+  hosts: all
+  vars:
+    mynfs: "bgfs-ansible1:/nfs/tech"
+    mountpoint: "/mnt/tech"
+    myopts: "rw,bg,hard,intr"
+  become: true
+  tasks:
+    - name: Copy file with owner and permissions
+      ansible.builtin.copy:
+        src: /etc/hosts
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Download foo.conf
+      ansible.builtin.get_url:
+        url: "https://www.beegfs.io/release/beegfs_7.3.2/dists/beegfs-rhel8.repo"
+        dest: "/etc/yum.repos.d/beegfs-rhel8.repo"
+        mode: "0644"
+
+    - name: Import a key from a url
+      ansible.builtin.rpm_key:
+        state: present
+        key: "https://www.beegfs.io/release/beegfs_7.3.2/gpg/GPG-KEY-beegfs"
+
+    - name: Install the latest version of of reqd packages
+      ansible.builtin.package:
+        name:
+          - epel-release
+          - gcc
+          - mlocate
+          - sysstat
+          - kernel-devel
+          - pcp
+          - nfs-utils
+        state: latest
+
+    - name: Upgrade all packages, excluding kernel & foo related packages
+      ansible.builtin.yum:
+        name: "*"
+        state: latest
+
+    - name: Install the latest of of common beegfs packages
+      ansible.builtin.package:
+        name:
+          - beegfs-utils
+          - beegfs-common
+          - beegfs-helperd
+        state: latest
+
+    - name: mount network share
+      ansible.posix.mount:
+        src: "{{ mynfs }}"
+        path: "{{ mountpoint }}"
+        fstype: nfs
+        opts: "{{ myopts }}"
+        state: mounted
+
+    - name: Run azure disk setupe udev rules
+      command: /mnt/66.sh
+#beegfs_distro_vars:
+#  RedHat:
+#    beegfs_repo_url: "https://www.beegfs.io/release/beegfs_7.3.2/dists/beegfs-rhel8.repo"
+#    beegfs_repo_key: "https://www.beegfs.io/release/beegfs_7.3.2/gpg/GPG-KEY-beegfs"
+#    beegfs_repo_file: "/etc/yum.repos.d/beegfs-rhel8.repo"
+#    kernel_dev_pkg: "kernel-devel"
+#
+#
+# Default filesystem options
+#beegfs_filesystem_opts: "-L data -K -d su=128k,sw=8 -l version=2,su=128k -isize=512"
+#beegfs_mount_opts: "noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k,nobarrier"
+#beegfs_force_format: false
+#beegfs_fstype: "xfs"
+#

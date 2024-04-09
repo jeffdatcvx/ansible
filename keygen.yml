@@ -1,0 +1,12 @@
+---
+- name: keygen
+  hosts: all
+  become: true
+  tasks:
+    - name: keygen azureuser
+      command: ssh-keygen -t rsa -N "" -f /home/azureuser/.ssh/id_rsa
+      become_user: azureuser
+
+    - name: keygen root
+      command: ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
+      become_user: root

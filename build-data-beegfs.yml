@@ -1,0 +1,27 @@
+---
+- name: build data volume beegfs
+  hosts: sfollower
+  become: yes
+  become_user: root
+  tasks:
+    - name: Create a new primary partition with a size of 1GiB
+      community.general.parted:
+        device: /dev/sdb
+        number: 1
+        fs_type: xfs
+        label: gpt
+        state: present
+
+    - name: Create a ext4 filesystem on /dev/sdb1 and check disk blocks
+      filesystem:
+        fstype: xfs
+        dev: /dev/sdb1
+        opts: "-d su=128k,sw=8 -l version=2,su=128k -isize=512"
+
+    - name: Mount filesystem
+      mount:
+        fstype: xfs
+        src: /dev/sdb1
+        path: /beegfs
+        opts: "noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"
+        state: mounted

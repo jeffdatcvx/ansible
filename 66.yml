@@ -1,0 +1,7 @@
+---
+- name: udev startup rules 66 for disk naming
+  hosts: all
+  become: true
+  tasks:
+    - name: Run azure disk setupe udev rules
+      command: /mnt/tech/66.sh

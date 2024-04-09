@@ -1,0 +1,43 @@
+---
+- name: beegfs client install
+  hosts: cfollower
+  become: true
+  tasks:
+    - name: remove beegfs packages for client
+      ansible.builtin.yum:
+        name:
+          - beegfs-client
+          - beegfs-helperd
+          - beegfs-common
+          - beegfs-utils
+        state: absent
+
+    - name: install beegfs packages for client
+      ansible.builtin.yum:
+        name:
+          - beegfs-client
+          - beegfs-helperd
+          - beegfs-common
+          - beegfs-utils
+        state: present
+
+    - name: disable authentication
+      command: "sed -i 's/connDisableAuthentication     = false/connDisableAuthentication     = true/g' /etc/beegfs/beegfs-client.conf"
+
+    - name: disable authentication
+      command: "sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/g' /etc/beegfs/beegfs-helperd.conf"
+
+    - name: Run client service setup script
+      command: /opt/beegfs/sbin/beegfs-setup-client -m bgfs-mgmt1
+
+    - name: Enable a timer unit for beegfs
+      ansible.builtin.systemd:
+        name: beegfs-helperd
+        state: started
+        enabled: yes
+
+    - name: Enable a timer unit for beegfs
+      ansible.builtin.systemd:
+        name: beegfs-client
+        state: started
+        enabled: yes

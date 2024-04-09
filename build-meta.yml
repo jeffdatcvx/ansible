@@ -1,0 +1,54 @@
+---
+- name: mount module demo
+  hosts: mfollower
+  become: true
+  tasks:
+    - name: remove beegfs packages for meta
+      ansible.builtin.yum:
+        name:
+          - beegfs-meta
+          - beegfs-common
+          - beegfs-utils
+        state: absent
+
+    - name: install beegfs packages for meta
+      ansible.builtin.yum:
+        name:
+          - beegfs-meta
+          - beegfs-common
+          - beegfs-utils
+        state: present
+
+    - name: disable authentication
+      command: "sed -i 's/connDisableAuthentication    = false/connDisableAuthentication    = true/g' /etc/beegfs/beegfs-meta.conf"
+
+    - name: Create a new primary partition with a size of 1GiB
+      community.general.parted:
+        device: /dev/sdb
+        number: 1
+        fs_type: ext4
+        label: gpt
+        state: present
+
+    - name: Create a ext4 filesystem on /dev/sdb1 and check disk blocks
+      filesystem:
+        fstype: ext4
+        dev: /dev/sdb1
+        opts: "-L meta -i 2048 -I 512 -J size=400 -Odir_index,filetype"
+
+    - name: Mount filesystem
+      mount:
+        fstype: ext4
+        src: LABEL=meta
+        path: /beegfs/meta
+        opts: "noatime,nodiratime"
+        state: mounted
+
+    - name: Run meta service setup script
+      command: /opt/beegfs/sbin/beegfs-setup-meta -p /beegfs/meta -m bgfs-meta1
+
+    - name: Enable a timer unit for dnf-automatic
+      ansible.builtin.systemd:
+        name: beegfs-meta
+        state: started
+        enabled: yes

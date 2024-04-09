@@ -1,0 +1,32 @@
+---
+- name: mount module demo
+  hosts: leader
+  become: true
+  tasks:
+    - name: remove beegfs packages for mgmt
+      ansible.builtin.yum:
+        name:
+          - beegfs-mgmtd
+          - beegfs-common
+          - beegfs-utils
+        state: absent
+
+    - name: install beegfs packages for mgmt
+      ansible.builtin.yum:
+        name:
+          - beegfs-mgmtd
+          - beegfs-common
+          - beegfs-utils
+        state: present
+
+    - name: disable authentication
+      command: "sed -i 's/connDisableAuthentication              = false/connDisableAuthentication              = true/g' /etc/beegfs/beegfs-mgmtd.conf"
+
+    - name: Run mgmtd service setup script
+      command: /opt/beegfs/sbin/beegfs-setup-mgmtd -p /beegfs/mgmtd -f
+
+    - name: Enable a timer unit for dnf-automatic
+      ansible.builtin.systemd:
+        name: beegfs-mgmtd
+        state: started
+        enabled: yes
